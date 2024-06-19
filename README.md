@@ -14,4 +14,4 @@ Front ends:
 
  - [Bitloop Tessellator](https://symbolfigures.io/bitloops/bittess.html)
 
-Both tools have a HTML front end and run on AWS API Gateway and Lambda.
+Both have a HTML front end and run on AWS API Gateway and Lambda.
