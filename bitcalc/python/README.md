@@ -3,14 +3,14 @@
 
 A tool that calculates various data points given a bit string up to 28 bits.
 
-[calc.py][1] calculates the data returned for the first four sections.
+[src/calc.py][1] calculates the data returned for the first four sections.
 
 * Properties of the bitstring ...
 * Properties of the bitloop ...
 * Properties of the tree ...
 * Properties of the chain ...
 
-[powerset.json][2] provides the data returned for the last section.
+[data/powerset.json][2] provides the data returned for the last section.
 
 * Properties of the power set ...
 

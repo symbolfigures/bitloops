@@ -1,5 +1,4 @@
 from PIL import Image, ImageDraw, ImageFont
-import calc
 
 def create_image(long_bs):
 
@@ -17,12 +16,13 @@ def create_image(long_bs):
 	for y in range(26):
 		long_ar = [int(i) for i in long_link]
 		for x in range(long_n):
-			
+
+			# bit coordinates
 			l0 = ((x + shift) % long_n, y)
 			l2 = ((x + shift + 1) % long_n, y)
 			u1 = ((x + shift + 0.5) % long_n, y + 1)
 			u3 = ((x + shift + 1.5) % long_n, y + 1)
-
+			# pixel coordinates
 			L0 = transform(l0[0], l0[1])
 			L2 = transform(l2[0], l2[1])
 			U1 = transform(u1[0], u1[1])
@@ -31,25 +31,34 @@ def create_image(long_bs):
 			if long_ar[x] == 0:
 				if long_ar[(x + 1) % long_n] == 1:
 					if long_ar[(x + 2) % long_n] == 0:
-						if u1[0] > l2[0] < u3[0]: # half-triangle visible on the left
+						# half-triangle visible on the left
+						if u1[0] > l2[0] < u3[0]:
 							U1 = (L2[0] - 20, U1[1])
-						if u1[0] < l2[0] > u3[0]: # half-triangle visible on the right
+						# half-triangle visible on the right
+						if u1[0] < l2[0] > u3[0]:
 							U3 = (L2[0] + 20, U3[1])
-						draw.polygon((L2, U1, U3), fill='#8800ff') # triangle
-						draw.line((L2, U1, U3, L2), fill='#8800ff', width=5) # triangle
+						# triangle
+						draw.polygon((L2, U1, U3), fill='#8800ff')
+						draw.line((L2, U1, U3, L2), fill='#8800ff', width=5)
 					else:
-						if l2[0] < u1[0]: # wraparound
+						# wraparound
+						if l2[0] < u1[0]:
 							U1 = (L2[0] - 20, U1[1])
-						draw.line((L2, U1), fill='#8800ff', width=5) # backward diagonal line
+						# backward diagonal line
+						draw.line((L2, U1), fill='#8800ff', width=5)
 			else:
 				if long_ar[(x + 1) % long_n] == 0:
-					if l0[0] > u1[0]: # wraparound
+					# wraparound
+					if l0[0] > u1[0]:
 						L0 = (U1[0] - 20, L0[1])
-					draw.line((L0, U1), fill='#8800ff', width=5) # forward diagonal line
+					# forward diagonal line
+					draw.line((L0, U1), fill='#8800ff', width=5)
 				else:
-					if l0[0] > l2[0]: # wraparound
+					# wraparound
+					if l0[0] > l2[0]:
 						L0 = (L2[0] - 40, L0[1])
-					draw.line((L0, L2), fill='#8800ff', width=5) # horizontal line
+					# horizontal line
+					draw.line((L0, L2), fill='#8800ff', width=5)
 
 		shift = shift + 0.5
 		long_link = link(long_link)
@@ -77,7 +86,7 @@ def transform(x, y):
 
 
 def link(bs):
-	"""first bit shifts 0.5 bits to the right"""
+	# first bit shifts 0.5 bits to the right
 	l = ''
 	for i in range(len(bs)):
 		l += str(int(bs[i]) ^ int(bs[(i +1) % len(bs)]))
