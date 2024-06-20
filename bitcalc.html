@@ -20,7 +20,7 @@
 	.submit:active {
 		background-color: #ff0000
 	}
-	.loading {
+	.loading, .loading * {
 		cursor: wait
 	}
 	table {
@@ -265,8 +265,8 @@
 	}
 	function sendGetRequest() {
 		var bitstring = document.getElementById('bitstring');
-		var submit = document.getElementById('submit');
-		submit.classList.add('loading');
+		var body = document.body;
+		body.classList.add('loading');
 		var urlstub = "https://m2thy5o9ya.execute-api.us-west-2.amazonaws.com/1/";
 		var url = urlstub.concat('?bitstring=', bitstring.value);
 		fetch(url).then(response => {
@@ -338,7 +338,7 @@
 			console.error("There was a problem with the fetch operation:", error);
 			document.getElementById('response').innerText = "Error: " + error.message;
 		}).finally(() => {
-			submit.classList.remove('loading');
+			body.classList.remove('loading');
 		});
 	}
 </script>

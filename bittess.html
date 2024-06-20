@@ -20,7 +20,7 @@
 	.submit:active {
 		background-color: #ff0000
 	}
-	.loading {
+	.loading, .loading * {
 		cursor: wait
 	}
 	table {
@@ -84,8 +84,8 @@
 	}
 	async function fetchImage() {
 		var bitstring = document.getElementById('bitstring');
-		var submit = document.getElementById('submit');
-		submit.classList.add('loading');
+		var body = document.body;
+		body.classList.add('loading');
 		var apiUrl = 'https://7hbga5ro71.execute-api.us-west-2.amazonaws.com/1/';
 		apiUrl = apiUrl.concat('?bitstring=', bitstring.value);
 		try {
@@ -100,7 +100,7 @@
 		} catch (error) {
 			console.error('Error fetching image:', error);
 		} finally {
-			submit.classList.remove('loading');
+			body.classList.remove('loading');
 		}
 	}
 </script>
