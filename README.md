@@ -2,10 +2,8 @@
 
 A bitloop is a bit string whose ends are connected to form a loop.
 
-Consequences of this simple concept are elaborated in detail here:
+Consequences of this simple concept are elaborated in detail [here](https://symbolfigures.io/bitloops.html).
 
- - https://symbolfigures.io/bitloops.html
+[Bitloop Calculator and Tesselator](https://symbolfigures.io/bitloops/bitcalc.html) is a tool to help interpret various properties of bitloops.
 
-Bitloop Calculator and Tesselator is a tool to help interpret various properties of bitloops.
-
-The [front end](https://symbolfigures.io/bitloops/bitcalc.html) is hosted with AWS S3, Cloudfront, API Gateway and Lambda.
+The front end utilizes AWS S3, Cloudfront, API Gateway and Lambda.
