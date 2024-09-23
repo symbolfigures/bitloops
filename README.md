@@ -6,12 +6,6 @@ Consequences of this simple concept are elaborated in detail here:
 
  - https://symbolfigures.io/bitloops.html
 
-This repository contains tools to help interpret the various properties of bitloops.
+Bitloop Calculator and Tesselator is a tool to help interpret various properties of bitloops.
 
-Front ends:
-
- - [Bitloop Calculator](https://symbolfigures.io/bitloops/bitcalc.html)
-
- - [Bitloop Tessellator](https://symbolfigures.io/bitloops/bittess.html)
-
-Both have a HTML front end and run on AWS API Gateway and Lambda.
+The [front end](https://symbolfigures.io/bitloops/bitcalc.html) is hosted with AWS S3, Cloudfront, API Gateway and Lambda.
