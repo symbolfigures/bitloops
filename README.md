@@ -10,4 +10,4 @@ The front end utilizes AWS S3, Cloudfront, API Gateway and Lambda.
 
 The calculator and tessellator each have their own Lambda functions, written in Python.
 
-The calculator also has a Java version, which is used to produce properties of power sets. This is saved in .csv files, and those are aggregated into one .json file, which is bundled and referenced by the python version.
+The calculator also has a Java version, which is used to produce properties of power sets. This is saved in .csv files, and those are aggregated into one .json file, which is bundled with and referenced by the python version.
