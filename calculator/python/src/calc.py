@@ -124,7 +124,7 @@ def roots(rt, num_roots):
 	rts = []
 	for i in range(num_roots):
 		rts.append(rt)
-	rt = link(rt)
+		rt = link(rt)
 	return rts
 
 def min_val_root(roots):
