@@ -53,16 +53,20 @@ class MCPClient:
 		self.session: Optional[ClientSession] = None
 		self.exit_stack = AsyncExitStack()
 		self.bedrock = boto3.client('bedrock-runtime', region_name='us-west-2')
-		self.paper_text: Optional[str] = None
+		self.research_paper: Optional[str] = None
 		self.available_tools: Optional[list] = None
 
 
-	def _call_bedrock(self, system_prompt: str, messages: list, available_tools: list):
+	def _call_bedrock(self, prompt: str, messages: list, available_tools: list, research_paper: str):
 		'''helper function to call Bedrock API'''
 		return self.bedrock.converse(
 			modelId='us.anthropic.claude-sonnet-4-5-20250929-v1:0',
 			inferenceConfig={'maxTokens': 1000, 'temperature': 0.5},
-			system=[{'text': system_prompt}],
+			system=[
+				{'text': research_paper},
+				{'cachePoint': {'type': 'default'}},
+				{'text': prompt}
+			],
 			messages=messages,
 			toolConfig={'tools': available_tools}
 		)
@@ -91,8 +95,8 @@ class MCPClient:
 	async def _initialize_resources(self):
 		'''fetch and cache the research paper and available tools'''
 		# get research paper
-		paper = await self.session.read_resource('research://bitloops-paper')
-		self.paper_text = paper.contents[0].text
+		response = await self.session.read_resource('research://bitloops-paper')
+		self.research_paper = response.contents[0].text
 
 		# get tools
 		response = await self.session.list_tools()
@@ -118,7 +122,7 @@ class MCPClient:
 		]
 
 		# use cached resources
-		system_prompt = role.prompt_template.format(paper=self.paper_text)
+		prompt = role.prompt_template
 
 		# track usage
 		tokens_i = 0
@@ -128,7 +132,7 @@ class MCPClient:
 		response = await asyncio.get_event_loop().run_in_executor(
 			None,
 			self._call_bedrock,
-			system_prompt, messages, self.available_tools
+			prompt, messages, self.available_tools, self.research_paper
 		)
 
 		# process response and handle tool calls
@@ -155,7 +159,6 @@ class MCPClient:
 					has_tool_use = True
 					tool_name = content['toolUse']['name']
 					tool_args = content['toolUse']['input']
-					print(f'calling tool {tool_name} with args {tool_args}', file=sys.stderr)
 					if status_callback:
 						await status_callback('calculating')
 					assistant_message_content.append(content)
@@ -193,9 +196,10 @@ class MCPClient:
 			response = await asyncio.get_event_loop().run_in_executor(
 				None,
 				self._call_bedrock,
-				system_prompt, messages, self.available_tools
+				prompt, messages, self.available_tools, self.research_paper
 			)
 
+		print(f'tokens(i, o): ({tokens_i}, {tokens_o})', file=sys.stderr)
 		return '\n'.join(final_text), (tokens_i, tokens_o)
 
 
@@ -207,21 +211,18 @@ class MCPClient:
 			await status_callback('first_responder')
 		first_query = first_responder.query_template.format(query=query)
 		first_response, tokens_F = await self.process_query(first_query, first_responder, status_callback)
-		print(f'first responder responded', file=sys.stderr)
 
 		# skeptic
 		if status_callback:
 			await status_callback('skeptic')
 		skeptic_query = skeptic.query_template.format(query=query, first_response=first_response)
 		skeptic_response, tokens_S = await self.process_query(skeptic_query, skeptic, status_callback)
-		print(f'skeptic responded', file=sys.stderr)
 
 		# arbiter
 		if status_callback:
 			await status_callback('arbiter')
 		arbiter_query = arbiter.query_template.format(query=query, first_response=first_response, skeptic_response=skeptic_response)
 		arbiter_response, tokens_A = await self.process_query(arbiter_query, arbiter, status_callback)
-		print(f'arbiter responded', file=sys.stderr)
 
 		tokens_i = tokens_F[0] + tokens_S[0] + tokens_A[0]
 		tokens_o = tokens_F[1] + tokens_S[1] + tokens_A[1]
@@ -234,7 +235,6 @@ class MCPClient:
 		# run parallel deliberations
 		if status_callback:
 			await status_callback('running_parallel_deliberations')
-		print('running parallel deliberations...', file=sys.stderr)
 
 		results = await asyncio.gather(
 			self.orchestrate_layer_1(query, status_callback),
@@ -244,8 +244,6 @@ class MCPClient:
 		deliberation_1, tokens_D1 = results[0]
 		deliberation_2, tokens_D2 = results[1]
 		deliberation_3, tokens_D3 = results[2]
-
-		print('deliberations complete', file=sys.stderr)
 
 		# judge the responses
 		if status_callback:
@@ -259,11 +257,11 @@ class MCPClient:
 		)
 
 		final_answer, tokens_J = await self.process_query(judge_query, judge, status_callback)
-		print('judgement complete', file=sys.stderr)
 
 		tokens_i = tokens_D1[0] + tokens_D2[0] + tokens_D3[0] + tokens_J[0]
 		tokens_o = tokens_D1[1] + tokens_D2[1] + tokens_D3[1] + tokens_J[1]
 		send_tokens_to_cloudwatch(tokens_i, tokens_o)
+		print(f'total tokens(i, o): ({tokens_i}, {tokens_o})', file=sys.stderr)
 		return final_answer
 
 

@@ -56,16 +56,12 @@ Judge over three trios|10|80%
 
 ### Efficiency
 
-This combination of role-based methods uses ten LLM calls and thus ten times less efficient than a chatbot that requires only one LLM call to get the question rigth at least 80% of the time.
+The research paper is read by each LLM. Reading it once consumes about 30,000 tokens. Including cachePoint in the Bedrock API call caches this part of the system prompt, reducing input token usage by nearly 90%.
 
-The number of input tokens is also extremely large, at over 300K tokens per query. This is because the research paper is read by each LLM.
+Another 70% of tokens (input and output) would be dropped if a single trio could get the question right 80% of the time. Of the remaining 30%, 20% of that would be dropped if the First Responder could get the question right 80% of the time.
 
-So the opportunities for improvement are:
-1. Improve accuracy of individual LLM responses.
-   - If a single trio can reach 80% accuracy, then remove the parallel calls and final Judge.
-   - If the First Responder can reach 80% accuracy, then remove the Skeptic and Arbiter from the trio.
-2. Don't have the LLM read the entire research paper.
-   - Restructure the paper in a way that can be seeked for relevant chunks, rather than reading from start to finish.
-   - Create embedding vectors from the chunks, and store them in a vector database.
+### Next steps
+
+Restructure research paper in a more LLM-friendly format, to help improve its interpretation of the content.
 
 
