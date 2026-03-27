@@ -7,10 +7,10 @@ from main import MCPClient
 
 QUESTION = "Take the bitloop '1100101'. Is this bitloop equal to its link?"
 NUM_ITERATIONS = 10
-RESULTS_FILE = 'test_results_t={temperature}.json'
+RESULTS_FILE = 'test_results.json'
 
 
-def extract_answer(response_text):
+def yes_or_no(response_text):
 	'''extract first occurrence of "yes" or "no"'''
 	if not response_text:
 		return None
@@ -20,11 +20,11 @@ def extract_answer(response_text):
 	return None
 
 
-async def run_test(temperature):
+async def run_test():
 	'''run orchestrate_layer_2 NUM_ITERATIONS times and save results as JSON.'''
 
 	# init MCP client
-	client = MCPClient(temperature)
+	client = MCPClient()
 	await client.connect_to_server('bitcalc.py')
 
 	test_start_time = datetime.now()
@@ -32,32 +32,22 @@ async def run_test(temperature):
 	results = {
 		'question': QUESTION,
 		'num_iterations': NUM_ITERATIONS,
-		'temperature': temperature,
 		'iterations': []
 	}
 
 	# run iterations
 	for i in range(1, NUM_ITERATIONS + 1):
-		print(f'\nTEMPERATURE: {temperature}\nITERATION NUMBER: {i}/{NUM_ITERATIONS}\n', file=sys.stderr)
+		print(f'\nITERATION NUMBER: {i}/{NUM_ITERATIONS}\n', file=sys.stderr)
 
 		start_time = datetime.now()
 		iteration_result = {
 			'iteration': i
 		}
 
-		try:
-			response = await client.orchestrate_layer_2(QUESTION)
-			iteration_result['response'] = response
-			iteration_result['success'] = True
-
-			# extract and log answer
-			answer = extract_answer(response)
-			iteration_result['answer'] = answer
-
-		except Exception as e:
-			iteration_result['error'] = str(e)
-			iteration_result['success'] = False
-			iteration_result['answer'] = None
+		response = await client.orchestrate_layer_2(QUESTION)
+		# extract and log answer
+		answer = yes_or_no(response)
+		iteration_result['answer'] = answer
 
 		end_time = datetime.now()
 		iteration_result['duration_seconds'] = round((end_time - start_time).total_seconds(), 2)
@@ -75,7 +65,7 @@ async def run_test(temperature):
 	results['accuracy'] = round(yes_percentage, 2)
 
 	# save results
-	with open(RESULTS_FILE.format(temperature=temperature), 'w') as f:
+	with open(RESULTS_FILE, 'w') as f:
 		json.dump(results, f, indent=2)
 
 	# cleanup
@@ -89,15 +79,9 @@ async def simple():
 	await client.cleanup()
 
 
-def compare_temperatures():
-	for i in range(1, 11, 1):
-		temperature = i / 10
-		asyncio.run(run_test(temperature))
-
-
 if __name__ == '__main__':
-	simple()
-	#compare_temperatures()
+	#asyncio.run(simple())
+	asyncio.run(run_test())
 
 
 

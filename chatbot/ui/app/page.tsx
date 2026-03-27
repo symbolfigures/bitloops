@@ -8,7 +8,7 @@ type Message = {
 	text: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || ''
+const API_URL = process.env.API_URL || ''
 const DEFAULT_QUESTION = "Take the bitloop '1100101'. Is this bitloop equal to its link?"
 
 export default function Chat() {

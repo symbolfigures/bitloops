@@ -124,10 +124,6 @@ class MCPClient:
 		# use cached resources
 		prompt = role.prompt_template
 
-		# track usage
-		tokens_i = 0
-		tokens_o = 0
-
 		# initial Bedrock API call
 		response = await asyncio.get_event_loop().run_in_executor(
 			None,
@@ -145,8 +141,11 @@ class MCPClient:
 
 			# tokens
 			if 'usage' in response:
-				tokens_i += response['usage'].get('inputTokens', 0)
-				tokens_o += response['usage'].get('outputTokens', 0)
+				usage = response['usage']
+				tokens_i = usage.get('inputTokens', 0)
+				tokens_o = usage.get('outputTokens', 0)
+				cache_r = usage.get('cacheReadInputTokens', 0)
+				cache_w = usage.get('cacheWriteInputTokens', 0)
 
 			assistant_message_content = []
 			has_tool_use = False
@@ -199,7 +198,15 @@ class MCPClient:
 				prompt, messages, self.available_tools, self.research_paper
 			)
 
-		print(f'tokens(i, o): ({tokens_i}, {tokens_o})', file=sys.stderr)
+		token_log = f'''\n
+		--- Usage ---
+		role: {role.name}
+		inputTokens: {tokens_i}
+		outputTokens: {tokens_o}
+		cacheReadInputTokens: {cache_r}
+		cacheWriteInputTokens: {cache_w}
+		\n'''
+		#print(token_log, file=sys.stderr)
 		return '\n'.join(final_text), (tokens_i, tokens_o)
 
 
@@ -238,12 +245,10 @@ class MCPClient:
 
 		results = await asyncio.gather(
 			self.orchestrate_layer_1(query, status_callback),
-			self.orchestrate_layer_1(query, status_callback),
 			self.orchestrate_layer_1(query, status_callback)
 		)
 		deliberation_1, tokens_D1 = results[0]
 		deliberation_2, tokens_D2 = results[1]
-		deliberation_3, tokens_D3 = results[2]
 
 		# judge the responses
 		if status_callback:
@@ -252,14 +257,13 @@ class MCPClient:
 		judge_query = judge.query_template.format(
 			query=query,
 			deliberation_1=deliberation_1,
-			deliberation_2=deliberation_2,
-			deliberation_3=deliberation_3
+			deliberation_2=deliberation_2
 		)
 
 		final_answer, tokens_J = await self.process_query(judge_query, judge, status_callback)
 
-		tokens_i = tokens_D1[0] + tokens_D2[0] + tokens_D3[0] + tokens_J[0]
-		tokens_o = tokens_D1[1] + tokens_D2[1] + tokens_D3[1] + tokens_J[1]
+		tokens_i = tokens_D1[0] + tokens_D2[0] + tokens_J[0]
+		tokens_o = tokens_D1[1] + tokens_D2[1] + tokens_J[1]
 		send_tokens_to_cloudwatch(tokens_i, tokens_o)
 		print(f'total tokens(i, o): ({tokens_i}, {tokens_o})', file=sys.stderr)
 		return final_answer
