@@ -6,8 +6,8 @@ from datetime import datetime
 from main import MCPClient
 
 QUESTION = "Take the bitloop '1100101'. Is this bitloop equal to its link?"
-NUM_ITERATIONS = 10
-RESULTS_FILE = 'test_results.json'
+NUM_ITERATIONS = 100
+RESULTS_FILE = f'test/test_results_p4_i{NUM_ITERATIONS}.json'
 
 
 def yes_or_no(response_text):
@@ -15,9 +15,9 @@ def yes_or_no(response_text):
 	if not response_text:
 		return None
 	match = re.search(r'\b(yes|no)\b', response_text, re.IGNORECASE)
-	if match:
-		return match.group(1).lower()
-	return None
+	if match and match.group(1).lower() == 'yes':
+		return 1
+	return 0
 
 
 async def run_test():
@@ -35,6 +35,10 @@ async def run_test():
 		'iterations': []
 	}
 
+	y_count_FR = 0
+	y_count_A = 0
+	y_count_J = 0
+
 	# run iterations
 	for i in range(1, NUM_ITERATIONS + 1):
 		print(f'\nITERATION NUMBER: {i}/{NUM_ITERATIONS}\n', file=sys.stderr)
@@ -44,10 +48,17 @@ async def run_test():
 			'iteration': i
 		}
 
-		response = await client.orchestrate_layer_2(QUESTION)
+		final_answer, analyses, first_responses = await client.orchestrate_layer_2(QUESTION)
 		# extract and log answer
-		answer = yes_or_no(response)
-		iteration_result['answer'] = answer
+		y_FR = (yes_or_no(first_responses[0]) + yes_or_no(first_responses[1])) / 2
+		y_A = (yes_or_no(analyses[0]) + yes_or_no(analyses[1])) / 2
+		y_J = yes_or_no(final_answer)
+		iteration_result['first_responder_y'] = y_FR
+		iteration_result['analysis_y'] = y_A
+		iteration_result['judge_y'] = y_J
+		y_count_FR += y_FR
+		y_count_A += y_A
+		y_count_J += y_J
 
 		end_time = datetime.now()
 		iteration_result['duration_seconds'] = round((end_time - start_time).total_seconds(), 2)
@@ -57,12 +68,10 @@ async def run_test():
 	results['avg_duration_seconds'] = round((test_end_time - test_start_time).total_seconds() / NUM_ITERATIONS, 2)
 
 	# calculate percentage of yes answers
-	yes_count = 0
-	for n in range(NUM_ITERATIONS):
-		if results['iterations'][n]['answer'] == 'yes':
-			yes_count += 1
-	yes_percentage = (yes_count / NUM_ITERATIONS * 100)
-	results['accuracy'] = round(yes_percentage, 2)
+	results['accuracy_FR'] = round((y_count_FR / NUM_ITERATIONS * 100), 2)
+	results['accuracy_A'] = round((y_count_A / NUM_ITERATIONS * 100), 2)
+	results['accuracy_J'] = round((y_count_J / NUM_ITERATIONS * 100), 2)
+
 
 	# save results
 	with open(RESULTS_FILE, 'w') as f:

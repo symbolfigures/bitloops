@@ -8,7 +8,7 @@ type Message = {
 	text: string
 }
 
-const API_URL = process.env.API_URL || ''
+const MCP_URL = process.env.NEXT_PUBLIC_MCP_URL || ''
 const DEFAULT_QUESTION = "Take the bitloop '1100101'. Is this bitloop equal to its link?"
 
 export default function Chat() {
@@ -31,7 +31,7 @@ export default function Chat() {
 		setIsLoading(true)
 
 		try {
-			const res = await fetch(`${API_URL}/mcp`, {
+			const res = await fetch(`${MCP_URL}/mcp`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ query: userMessage.text })
@@ -63,8 +63,8 @@ export default function Chat() {
 					if (line.startsWith('data: ')) {
 						const data = JSON.parse(line.slice(6))
 
-						if (data.status === 'running_parallel_deliberations') {
-							setStatusMessages(prev => [...prev, 'running parallel deliberations...'])
+						if (data.status === 'running_parallel_analyses') {
+							setStatusMessages(prev => [...prev, 'running parallel analyses...'])
 						} else if (data.status === 'judging') {
 							setStatusMessages(prev => [...prev, 'judging responses...'])
 						} else if (data.status === 'first_responder') {

@@ -14,15 +14,12 @@ from mcp.client.stdio import stdio_client
 
 from roles import first_responder, skeptic, arbiter, judge
 
-
 # Pydantic model for request body
 class QueryRequest(BaseModel):
 	query: str
 
-
 # FastAPI app instance
 app = FastAPI()
-
 
 # Global MCP client instance
 mcp_client: Optional['MCPClient'] = None
@@ -216,39 +213,47 @@ class MCPClient:
 		# first_responder
 		if status_callback:
 			await status_callback('first_responder')
-		first_query = first_responder.query_template.format(query=query)
+		first_query = first_responder.query_template.format(
+			query=query)
 		first_response, tokens_F = await self.process_query(first_query, first_responder, status_callback)
 
 		# skeptic
 		if status_callback:
 			await status_callback('skeptic')
-		skeptic_query = skeptic.query_template.format(query=query, first_response=first_response)
+		skeptic_query = skeptic.query_template.format(
+			query=query,
+			first_response=first_response)
 		skeptic_response, tokens_S = await self.process_query(skeptic_query, skeptic, status_callback)
 
 		# arbiter
 		if status_callback:
 			await status_callback('arbiter')
-		arbiter_query = arbiter.query_template.format(query=query, first_response=first_response, skeptic_response=skeptic_response)
+		arbiter_query = arbiter.query_template.format(
+			query=query,
+			first_response=first_response,
+			skeptic_response=skeptic_response)
 		arbiter_response, tokens_A = await self.process_query(arbiter_query, arbiter, status_callback)
 
 		tokens_i = tokens_F[0] + tokens_S[0] + tokens_A[0]
 		tokens_o = tokens_F[1] + tokens_S[1] + tokens_A[1]
-		return arbiter_response, (tokens_i, tokens_o)
+		return arbiter_response, (tokens_i, tokens_o), first_response
 
 
 	async def orchestrate_layer_2(self, query: str, status_callback=None):
-		'''run parallel deliberations and judge between them.'''
+		'''run parallel analyses and judge between them.'''
 
-		# run parallel deliberations
+		# run parallel analyses
 		if status_callback:
-			await status_callback('running_parallel_deliberations')
+			await status_callback('running_parallel_analyses')
 
 		results = await asyncio.gather(
 			self.orchestrate_layer_1(query, status_callback),
 			self.orchestrate_layer_1(query, status_callback)
 		)
-		deliberation_1, tokens_D1 = results[0]
-		deliberation_2, tokens_D2 = results[1]
+		analysis_1, tokens_D1, first_response_1 = results[0]
+		analysis_2, tokens_D2, first_response_2 = results[1]
+		analyses = (analysis_1, analysis_2)
+		first_responses = (first_response_1, first_response_2)
 
 		# judge the responses
 		if status_callback:
@@ -256,8 +261,8 @@ class MCPClient:
 
 		judge_query = judge.query_template.format(
 			query=query,
-			deliberation_1=deliberation_1,
-			deliberation_2=deliberation_2
+			analysis_1=analysis_1,
+			analysis_2=analysis_2
 		)
 
 		final_answer, tokens_J = await self.process_query(judge_query, judge, status_callback)
@@ -266,7 +271,7 @@ class MCPClient:
 		tokens_o = tokens_D1[1] + tokens_D2[1] + tokens_J[1]
 		send_tokens_to_cloudwatch(tokens_i, tokens_o)
 		print(f'total tokens(i, o): ({tokens_i}, {tokens_o})', file=sys.stderr)
-		return final_answer
+		return final_answer, analyses, first_responses
 
 
 	async def cleanup(self):
@@ -312,7 +317,7 @@ async def query_endpoint(request: QueryRequest):
 			await status_queue.put({'status': status})
 
 		try:
-			response_text = await mcp_client.orchestrate_layer_2(request.query, send_status)
+			response_text, _, _ = await mcp_client.orchestrate_layer_2(request.query, send_status)
 			await status_queue.put({'status': 'done', 'response': response_text})
 		except Exception as e:
 			await status_queue.put({'status': 'error', 'error': str(e)})

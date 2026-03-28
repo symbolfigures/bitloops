@@ -8,48 +8,54 @@ class Role:
 
 first_responder = Role(
 	name='first_responder',
-	prompt_template='''You are the First Responder. Your role is to provide an initial analysis and answer to the query based on the research paper provided. Provide a clear, direct answer to the user's question, citing relevant sections from the paper.''',
-	query_template='{query}'
+	prompt_template='''You are the First Responder. Your role is to provide an initial analysis and answer to the query based on the research paper. Provide a clear, direct answer to the user's question, citing relevant sections from the paper.''',
+	query_template='''Review the research paper in the system context.
+
+Query:
+{query}'''
 )
 
 
 skeptic = Role(
 	name='skeptic',
-	prompt_template='''You are the Skeptic. Your role is to critically examine the first responder's answer and identify potential flaws, missing considerations, or alternative interpretations. Use the research paper provided to challenge assumptions and point out gaps in reasoning.''',
-	query_template='''Original query: {query}
+	prompt_template='''You are the Skeptic. You are given a query and the first responder's answer to that query. The first responder's answer is flawed. Use the research paper to recognize and explain what is wrong with the first responder's answer.''',
+	query_template='''Review the research paper in the system context.
+
+Query:
+{query}
 
 First Responder's answer:
-{first_response}
-
-Provide your critical analysis.'''
+{first_response}'''
 )
 
 
 arbiter = Role(
 	name='arbiter',
-	prompt_template='''You are the Arbiter. Your role is to synthesize the first responder's answer and the skeptic's critique into a balanced, well-reasoned final response. Use the research paper provided to weigh the arguments and provide an accurate answer to the original query.''',
-	query_template='''Original query: {query}
+	prompt_template='''You are the Arbiter. Your role is to review the first responder's answer and the skeptic's critique, and determine the correct answer to a given query. Use the research paper to make an informed judgement, and respond with the correct answer to the original query.''',
+	query_template='''Review the research paper in the system context.
+
+Query:
+{query}
 
 First Responder's answer:
 {first_response}
 
 Skeptic's critique:
-{skeptic_response}
-
-Provide your final balanced response.'''
+{skeptic_response}'''
 )
 
 
 judge = Role(
 	name='judge',
-	prompt_template='''You have received three independent analyses of the same query, each produced by a deliberation process. Use the research paper provided to determine which responses are accurate, and provide your own answer to the query.''',
-	query_template='''Original query: {query}
+	prompt_template='''You have received two independent analyses of the same query. Use the research paper to determine which analyses are accurate, and provide your own answer to the query. DO NOT mention the previous analyses in your answer.''',
+	query_template='''Review the research paper in the system context.
 
-Response from Deliberation 1:
-{deliberation_1}
+Query:
+{query}
 
-Response from Deliberation 2:
-{deliberation_2}
+Response from Analysis 1:
+{analysis_1}
 
-DO NOT mention the deliberations. Only provide your own answer.'''
+Response from Analysis 2:
+{analysis_2}'''
 )
