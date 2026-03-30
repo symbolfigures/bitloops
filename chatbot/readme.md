@@ -68,16 +68,7 @@ First Responder | 1 | 0.0%
 Deliberation | 3 | 75.5%
 Judge | 7 | 82%
 
-### Efficiency
+Each role is prompted to use the research paper to inform their response. Reading it once consumes about 17,000 tokens. Including cachePoint in the Bedrock API call caches this part of the system prompt, so it only needs to be read once. It's saved for later queries as well. For this to work, the prompt needs to explicitly tell the model to review the research paper in the system context.
 
-Increasing parallel calls might help the Judge's accuracy, but it seems an obviously excessive use of energy just to answer a question.
-
-Each role is prompted to use the research paper to inform their response. Reading it once consumes about 17,000 tokens. Including cachePoint in the Bedrock API call caches this part of the system prompt, so it only needs to be read once. It's saved for later queries as well.
-
-Only three Bedrock calls would be needed if a single analysis met target accuracy. Moreover, only one would be needed if the First Responder met target accuracy.
-
-### Next steps
-
-Restructure research paper in a more LLM-friendly format, to help improve its interpretation of the content. Then reduce the number of Bedrock calls while meeting target.
 
 
