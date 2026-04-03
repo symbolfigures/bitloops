@@ -4,10 +4,10 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 
 # initialize FastMCP server
-mcp = FastMCP('bitcalc')
+mcp = FastMCP('bitloops')
 
 BITCALC_API_BASE = 'https://symbolfigures.io/api/bitloops/calc'
-USER_AGENT = 'bitcalc-app/1.0'
+USER_AGENT = 'bitloops-app/1.0'
 
 
 # helper functions to query and format data from bitloops API
@@ -91,7 +91,8 @@ async def get_properties(state: str) -> str:
 @mcp.resource('research://bitloops-paper')
 async def get_paper() -> str:
 	async with httpx.AsyncClient(timeout=30.0) as client:
-		response = await client.get('https://symbolfigures.io/bitloops.html')
+		#response = await client.get('https://symbolfigures.io/bitloops.html')
+		response = await client.get('https://symbolfigures.io/bitloops/bitloops.yml')
 		return response.text
 
 

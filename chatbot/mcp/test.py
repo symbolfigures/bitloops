@@ -5,9 +5,9 @@ import re
 from datetime import datetime
 from main import MCPClient
 
-QUESTION = "Take the bitloop '1100101'. Is this bitloop equal to its link?"
+QUESTION = "Take the bitloop 1100101. Is this bitloop equal to its link?"
 NUM_ITERATIONS = 100
-RESULTS_FILE = f'test/test_results_p4_i{NUM_ITERATIONS}.json'
+RESULTS_FILE = f'test/desc_i{NUM_ITERATIONS}.json'
 
 
 def yes_or_no(response_text):
@@ -25,7 +25,7 @@ async def run_test():
 
 	# init MCP client
 	client = MCPClient()
-	await client.connect_to_server('bitcalc.py')
+	await client.connect_to_server('bitloops.py')
 
 	test_start_time = datetime.now()
 
@@ -48,10 +48,10 @@ async def run_test():
 			'iteration': i
 		}
 
-		final_answer, analyses, first_responses = await client.orchestrate_layer_2(QUESTION)
+		final_answer, analyses, tokens = await client.orchestrate_parallel(QUESTION)
 		# extract and log answer
-		y_FR = (yes_or_no(first_responses[0]) + yes_or_no(first_responses[1])) / 2
-		y_A = (yes_or_no(analyses[0]) + yes_or_no(analyses[1])) / 2
+		y_FR = (yes_or_no(analyses[0][0]) + yes_or_no(analyses[1][0])) / 2
+		y_A = (yes_or_no(analyses[0][2]) + yes_or_no(analyses[1][2])) / 2
 		y_J = yes_or_no(final_answer)
 		iteration_result['first_responder_y'] = y_FR
 		iteration_result['analysis_y'] = y_A
@@ -59,6 +59,11 @@ async def run_test():
 		y_count_FR += y_FR
 		y_count_A += y_A
 		y_count_J += y_J
+
+		iteration_result['inputTokens'] = tokens[0]
+		iteration_result['outputTokens'] = tokens[1]
+		iteration_result['cacheReadInputTokens'] = tokens[2]
+		iteration_result['cacheWriteInputTokens'] = tokens[3]
 
 		end_time = datetime.now()
 		iteration_result['duration_seconds'] = round((end_time - start_time).total_seconds(), 2)

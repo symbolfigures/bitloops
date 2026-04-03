@@ -32,7 +32,7 @@ The Orchestrator may call Claude several times as though multiple LLMs worked to
 
 The Bedrock API includes a system prompt to define these [roles](mcp/roles.py).
 
-### Performance
+### Orchestration
 
 Here is an example question and a common outcome:
 
@@ -62,13 +62,24 @@ Outcome | Judge's accuracy
 
 This results in a 6.5% increase in accuracy.
 
-Method | LLM calls | Accuracy
+Role | LLM calls | Accuracy
 ---|---|---
 First Responder | 1 | 0.0%
-Deliberation | 3 | 75.5%
+Arbiter | 3 | 75.5%
 Judge | 7 | 82%
 
 Each role is prompted to use the research paper to inform their response. Reading it once consumes about 17,000 tokens. Including cachePoint in the Bedrock API call caches this part of the system prompt, so it only needs to be read once. It's saved for later queries as well. For this to work, the prompt needs to explicitly tell the model to review the research paper in the system context.
 
+### Research Paper Ingestion
 
+The original research paper was written for a human audience, not a LLM.
 
+Overall accuracy increased from 82% to 94% by rewriting the research paper, chainging the format from [HTML](https://symbolfigures.io/bitloops.html) to [YAML](https://symbolfigures.io/bitloops/bitloops.yml). The same orchestration process is still needed for accuracy.
+
+Role | HTML | YAML
+---|---|---
+First Responder | 0.0% | 0.0%
+Arbiter | 75.5% | 78.5%
+Judge | 82% | 94%
+
+The YAML format also opens the door to selective retrieval. Like the functions in an MCP tool, the LLM would receive a list of concepts and request details of any that appear relevant. In this case the paper is small enough that the entire thing can be passed in, thus avoiding the additional complexity.

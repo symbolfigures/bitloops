@@ -9,7 +9,7 @@ type Message = {
 }
 
 const MCP_URL = process.env.NEXT_PUBLIC_MCP_URL || ''
-const DEFAULT_QUESTION = "Take the bitloop '1100101'. Is this bitloop equal to its link?"
+const DEFAULT_QUESTION = "Take the bitloop 1100101. Is this bitloop equal to its link?"
 
 export default function Chat() {
 

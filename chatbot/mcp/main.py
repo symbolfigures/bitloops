@@ -25,19 +25,29 @@ app = FastAPI()
 mcp_client: Optional['MCPClient'] = None
 
 
-def send_tokens_to_cloudwatch(tokens_i, tokens_o):
+def send_tokens_to_cloudwatch(tokens):
 	cloudwatch = boto3.client('cloudwatch', region_name='us-west-2')
 	cloudwatch.put_metric_data(
 		Namespace='BitloopsChatbot',
 		MetricData=[
 			{
 				'MetricName': 'inputTokens',
-				'Value': tokens_i,
+				'Value': tokens[0],
 				'Unit': 'Count'
 			},
 			{
 				'MetricName': 'outputTokens',
-				'Value': tokens_o,
+				'Value': tokens[1],
+				'Unit': 'Count'
+			},
+			{
+				'MetricName': 'cacheReadInputTokens',
+				'Value': tokens[2],
+				'Unit': 'Count'
+			},
+			{
+				'MetricName': 'cacheWriteInputTokens',
+				'Value': tokens[3],
 				'Unit': 'Count'
 			}
 		]
@@ -141,8 +151,8 @@ class MCPClient:
 				usage = response['usage']
 				tokens_i = usage.get('inputTokens', 0)
 				tokens_o = usage.get('outputTokens', 0)
-				cache_r = usage.get('cacheReadInputTokens', 0)
-				cache_w = usage.get('cacheWriteInputTokens', 0)
+				tokens_cri = usage.get('cacheReadInputTokens', 0)
+				tokens_cwi = usage.get('cacheWriteInputTokens', 0)
 
 			assistant_message_content = []
 			has_tool_use = False
@@ -195,19 +205,10 @@ class MCPClient:
 				prompt, messages, self.available_tools, self.research_paper
 			)
 
-		token_log = f'''\n
-		--- Usage ---
-		role: {role.name}
-		inputTokens: {tokens_i}
-		outputTokens: {tokens_o}
-		cacheReadInputTokens: {cache_r}
-		cacheWriteInputTokens: {cache_w}
-		\n'''
-		#print(token_log, file=sys.stderr)
-		return '\n'.join(final_text), (tokens_i, tokens_o)
+		return '\n'.join(final_text), (tokens_i, tokens_o, tokens_cri, tokens_cwi)
 
 
-	async def orchestrate_layer_1(self, query: str, status_callback=None):
+	async def orchestrate(self, query: str, status_callback=None):
 		'''orchestrate three roles: first_responder, skeptic, arbiter'''
 
 		# first_responder
@@ -234,12 +235,16 @@ class MCPClient:
 			skeptic_response=skeptic_response)
 		arbiter_response, tokens_A = await self.process_query(arbiter_query, arbiter, status_callback)
 
+		analysis = (first_response, skeptic_response, arbiter_response)
 		tokens_i = tokens_F[0] + tokens_S[0] + tokens_A[0]
 		tokens_o = tokens_F[1] + tokens_S[1] + tokens_A[1]
-		return arbiter_response, (tokens_i, tokens_o), first_response
+		tokens_cri = tokens_F[0] + tokens_S[0] + tokens_A[0]
+		tokens_cwi = tokens_F[1] + tokens_S[1] + tokens_A[1]
+		tokens = (tokens_i, tokens_o, tokens_cri, tokens_cwi)
+		return analysis, tokens
 
 
-	async def orchestrate_layer_2(self, query: str, status_callback=None):
+	async def orchestrate_parallel(self, query: str, status_callback=None):
 		'''run parallel analyses and judge between them.'''
 
 		# run parallel analyses
@@ -247,13 +252,12 @@ class MCPClient:
 			await status_callback('running_parallel_analyses')
 
 		results = await asyncio.gather(
-			self.orchestrate_layer_1(query, status_callback),
-			self.orchestrate_layer_1(query, status_callback)
+			self.orchestrate(query, status_callback),
+			self.orchestrate(query, status_callback)
 		)
-		analysis_1, tokens_D1, first_response_1 = results[0]
-		analysis_2, tokens_D2, first_response_2 = results[1]
+		analysis_1, tokens_1 = results[0]
+		analysis_2, tokens_2 = results[1]
 		analyses = (analysis_1, analysis_2)
-		first_responses = (first_response_1, first_response_2)
 
 		# judge the responses
 		if status_callback:
@@ -261,17 +265,19 @@ class MCPClient:
 
 		judge_query = judge.query_template.format(
 			query=query,
-			analysis_1=analysis_1,
-			analysis_2=analysis_2
+			arbiter_response_1=analysis_1[2],
+			arbiter_response_2=analysis_2[2]
 		)
 
 		final_answer, tokens_J = await self.process_query(judge_query, judge, status_callback)
 
-		tokens_i = tokens_D1[0] + tokens_D2[0] + tokens_J[0]
-		tokens_o = tokens_D1[1] + tokens_D2[1] + tokens_J[1]
-		send_tokens_to_cloudwatch(tokens_i, tokens_o)
-		print(f'total tokens(i, o): ({tokens_i}, {tokens_o})', file=sys.stderr)
-		return final_answer, analyses, first_responses
+		tokens_i = tokens_1[0] + tokens_2[0] + tokens_J[0]
+		tokens_o = tokens_1[1] + tokens_2[1] + tokens_J[1]
+		tokens_cri = tokens_1[2] + tokens_2[2] + tokens_J[2]
+		tokens_cwi = tokens_1[3] + tokens_2[3] + tokens_J[3]
+		tokens = (tokens_i, tokens_o, tokens_cri, tokens_cwi)
+		send_tokens_to_cloudwatch(tokens)
+		return final_answer, analyses, tokens
 
 
 	async def cleanup(self):
@@ -285,7 +291,7 @@ class MCPClient:
 async def startup_event():
 	'''initialize MCP client on server startup'''
 	global mcp_client
-	path_to_server = 'bitcalc.py'
+	path_to_server = 'bitloops.py'
 	mcp_client = MCPClient()
 	await mcp_client.connect_to_server(path_to_server)
 	print('MCP HTTP server started and connected to MCP server', file=sys.stderr)
@@ -317,7 +323,7 @@ async def query_endpoint(request: QueryRequest):
 			await status_queue.put({'status': status})
 
 		try:
-			response_text, _, _ = await mcp_client.orchestrate_layer_2(request.query, send_status)
+			response_text, _, _ = await mcp_client.orchestrate_parallel(request.query, send_status)
 			await status_queue.put({'status': 'done', 'response': response_text})
 		except Exception as e:
 			await status_queue.put({'status': 'error', 'error': str(e)})

@@ -54,8 +54,8 @@ Query:
 {query}
 
 Response from Analysis 1:
-{analysis_1}
+{arbiter_response_1}
 
 Response from Analysis 2:
-{analysis_2}'''
+{arbiter_response_2}'''
 )
